@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>האכל את הדינוזאור!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0; padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    html { height: 100%; }
+
+    body {
+      font-family: 'Rubik', 'Arial Hebrew', 'Comic Sans MS', cursive;
+      background: linear-gradient(160deg, #e8f5e9 0%, #f9fbe7 55%, #e3f2fd 100%);
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #game {
+      width: min(100vw, 430px);
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 14px 18px;
+      gap: 8px;
+      position: relative;
+    }
+
+    /* ─── Banner ─── */
+    #banner {
+      width: 100%;
+      background: white;
+      border-radius: 26px;
+      padding: 10px 16px 12px;
+      box-shadow: 0 4px 18px rgba(76,175,80,.22);
+      border: 3px solid #A5D6A7;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .banner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .banner-top {
+      font-size: clamp(16px, 4.5vw, 20px);
+      color: #388E3C;
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+    #timer {
+      font-size: clamp(18px, 5vw, 22px);
+      font-weight: 900;
+      min-width: 54px;
+      text-align: center;
+      border-radius: 14px;
+      padding: 2px 8px;
+      background: #E8F5E9;
+      transition: background .3s, color .3s;
+    }
+    #timer.warn { color: #E65100; background: #FFF3E0; }
+    #timer.danger { color: #C62828; background: #FFEBEE; animation: timerPulse .5s ease-in-out infinite alternate; }
+    @keyframes timerPulse {
+      from { transform: scale(1); }
+      to   { transform: scale(1.18); }
+    }
+    #num-display {
+      font-size: clamp(72px, 22vw, 100px);
+      line-height: 1;
+      color: #FF6F00;
+      font-weight: 900;
+      text-shadow: 3px 3px 0 #FFE0B2;
+    }
+    #food-display {
+      font-size: clamp(18px, 5.5vw, 24px);
+      color: #1565C0;
+      font-weight: 800;
+    }
+
+    /* pop animation */
+    @keyframes popIn {
+      0%   { transform: scale(.3) rotate(-10deg); opacity: 0; }
+      65%  { transform: scale(1.18) rotate(4deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .pop { animation: popIn .45s cubic-bezier(.34,1.56,.64,1) both; }
+
+    /* ─── Progress dots ─── */
+    #progress-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      min-height: 26px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .dot {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 3px solid #81C784;
+      background: white;
+      transition: background .25s, transform .2s;
+    }
+    .dot.filled {
+      background: #43A047;
+      border-color: #2E7D32;
+      transform: scale(1.2);
+    }
+
+    /* ─── Dinosaur ─── */
+    #dino-wrap {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #dino-wrap svg {
+      width: clamp(120px, 36vw, 170px);
+      height: auto;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.15));
+    }
+    #dino-wrap.idle svg   { animation: breathe 2.4s ease-in-out infinite; }
+    #dino-wrap.eating svg { animation: chomp .28s ease-out both; }
+    #dino-wrap.happy svg  { animation: happyBounce .55s ease-in-out infinite alternate; }
+
+    @keyframes breathe {
+      0%,100% { transform: scaleY(1) translateY(0); }
+      50%      { transform: scaleY(1.04) translateY(-3px); }
+    }
+    @keyframes chomp {
+      0%   { transform: translateY(0) scale(1); }
+      35%  { transform: translateY(-10px) scale(1.1); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    @keyframes happyBounce {
+      from { transform: translateY(0) rotate(-7deg) scale(1); }
+      to   { transform: translateY(-14px) rotate(7deg) scale(1.05); }
+    }
+
+    /* ─── Food grid ─── */
+    #food-grid {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 4px 0;
+    }
+
+    .food-btn {
+      width: clamp(64px, 19vw, 82px);
+      height: clamp(64px, 19vw, 82px);
+      border-radius: 20px;
+      background: white;
+      border: 3px solid #A5D6A7;
+      box-shadow: 0 4px 12px rgba(0,0,0,.13);
+      font-size: clamp(34px, 10.5vw, 46px);
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      animation: foodAppear .4s cubic-bezier(.34,1.56,.64,1) backwards;
+    }
+    .food-btn:active { transform: scale(.87); }
+
+    @keyframes foodAppear {
+      from { transform: scale(0) rotate(-25deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+    }
+    @keyframes foodFloat {
+      0%,100% { transform: translateY(0); }
+      50%     { transform: translateY(-7px); }
+    }
+    .food-btn.float { animation: foodFloat 1.9s ease-in-out infinite; }
+
+    .food-btn.eaten {
+      animation: flyAway .38s ease-in forwards !important;
+      pointer-events: none;
+    }
+    @keyframes flyAway {
+      0%   { transform: scale(1) translateY(0); opacity: 1; }
+      30%  { transform: scale(1.3) translateY(-22px); opacity: 1; }
+      100% { transform: scale(0) translateY(-130px) rotate(400deg); opacity: 0; }
+    }
+
+    /* Leftover items (unchosen extras) fade away on win */
+    .food-btn.leftover {
+      animation: fadeOut .5s ease forwards !important;
+      pointer-events: none;
+    }
+    @keyframes fadeOut {
+      0%   { transform: scale(1); opacity: 1; }
+      100% { transform: scale(.7); opacity: 0; }
+    }
+
+    /* ─── Celebration overlay ─── */
+    #celebration {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.87);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; z-index: 60;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+    }
+    #celebration.show { opacity: 1; }
+
+    .cel-stars { font-size: clamp(44px,13vw,60px); }
+    .cel-yay {
+      font-size: clamp(52px,16vw,76px);
+      font-weight: 900; color: #FF6F00;
+      animation: yayPop .5s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    .cel-sub {
+      font-size: clamp(22px,7vw,30px);
+      font-weight: 800; color: #2E7D32;
+    }
+    @keyframes yayPop {
+      from { transform: scale(0) rotate(-15deg); }
+      to   { transform: scale(1) rotate(0deg); }
+    }
+
+    /* ─── OK button ─── */
+    #ok-btn {
+      width: min(85%, 300px);
+      height: 66px;
+      border-radius: 33px;
+      background: linear-gradient(135deg, #43A047, #2E7D32);
+      color: white;
+      font-size: clamp(22px, 7vw, 28px);
+      font-weight: 900;
+      font-family: inherit;
+      letter-spacing: 1px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(67,160,71,.45);
+      flex-shrink: 0;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: transform .1s, box-shadow .1s;
+    }
+    #ok-btn:active {
+      transform: scale(.94);
+      box-shadow: 0 2px 8px rgba(67,160,71,.4);
+    }
+
+    /* ─── Wrong food tap shake ─── */
+    .food-btn.wrong-shake {
+      animation: btnWrongShake .42s ease both !important;
+      border-color: #EF5350 !important;
+      box-shadow: 0 4px 14px rgba(239,83,80,.35) !important;
+    }
+    @keyframes btnWrongShake {
+      0%,100% { transform: translateX(0) rotate(0); }
+      20%     { transform: translateX(-8px) rotate(-6deg); }
+      50%     { transform: translateX(8px) rotate(6deg); }
+      80%     { transform: translateX(-4px) rotate(-2deg); }
+    }
+
+    /* ─── Sad dino shake ─── */
+    #dino-wrap.sad svg { animation: sadShake .55s ease both; }
+    @keyframes sadShake {
+      0%,100% { transform: translateX(0) rotate(0); }
+      20%     { transform: translateX(-9px) rotate(-4deg); }
+      40%     { transform: translateX(9px) rotate(4deg); }
+      60%     { transform: translateX(-6px) rotate(-2deg); }
+      80%     { transform: translateX(6px) rotate(2deg); }
+    }
+
+    /* ─── Confetti ─── */
+    .cf {
+      position: fixed; top: -20px;
+      pointer-events: none; z-index: 70;
+      border-radius: 3px;
+    }
+    @keyframes cfFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(108vh) rotate(720deg); opacity: .1; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="game">
+
+  <div id="banner">
+    <div class="banner-header">
+      <div class="banner-top">תן לי</div>
+      <div id="timer">⏱ 30</div>
+    </div>
+    <div id="num-display">?</div>
+    <div id="food-display">טוען...</div>
+  </div>
+
+  <div id="progress-row"></div>
+
+  <!-- Cute front-facing dinosaur SVG -->
+  <div id="dino-wrap" class="idle">
+    <svg viewBox="0 0 170 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Tail -->
+      <path d="M 128 182 Q 158 188 156 205 Q 152 220 136 210 Q 122 198 124 180" fill="#43A047"/>
+      <!-- Body -->
+      <ellipse cx="84" cy="165" rx="58" ry="53" fill="#4CAF50"/>
+      <!-- Belly -->
+      <ellipse cx="84" cy="176" rx="36" ry="40" fill="#C8E6C9"/>
+      <!-- Neck -->
+      <path d="M 67 110 Q 65 122 67 134 L 102 134 Q 104 122 102 110 Z" fill="#4CAF50"/>
+      <!-- Head -->
+      <ellipse cx="84" cy="88" rx="52" ry="46" fill="#4CAF50"/>
+      <!-- Head spikes -->
+      <polygon points="60,46 66,24 72,46" fill="#2E7D32"/>
+      <polygon points="78,38 84,16 90,38" fill="#2E7D32"/>
+      <polygon points="96,46 102,26 108,46" fill="#2E7D32"/>
+      <!-- Eyes (whites) -->
+      <circle cx="66" cy="78" r="16" fill="white"/>
+      <circle cx="102" cy="78" r="16" fill="white"/>
+      <!-- Irises -->
+      <circle cx="68" cy="80" r="11" fill="#1E88E5"/>
+      <circle cx="104" cy="80" r="11" fill="#1E88E5"/>
+      <!-- Pupils -->
+      <circle cx="68" cy="80" r="6.5" fill="#0D47A1"/>
+      <circle cx="104" cy="80" r="6.5" fill="#0D47A1"/>
+      <!-- Eye shine -->
+      <circle cx="71" cy="76" r="2.8" fill="white"/>
+      <circle cx="107" cy="76" r="2.8" fill="white"/>
+      <!-- Snout -->
+      <ellipse cx="84" cy="108" rx="23" ry="17" fill="#66BB6A"/>
+      <!-- Nostrils -->
+      <ellipse cx="77" cy="103" rx="3.2" ry="2.6" fill="#388E3C"/>
+      <ellipse cx="91" cy="103" rx="3.2" ry="2.6" fill="#388E3C"/>
+      <!-- Mouth (changes via JS) -->
+      <path id="mouth" d="M 68 118 Q 84 130 100 118"
+            stroke="#2E7D32" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+      <!-- Left arm -->
+      <path d="M 32 155 Q 22 167 27 177 Q 32 182 41 173 L 44 155 Z" fill="#43A047"/>
+      <!-- Right arm -->
+      <path d="M 136 155 Q 146 167 141 177 Q 136 182 127 173 L 124 155 Z" fill="#43A047"/>
+      <!-- Left fingers -->
+      <circle cx="24" cy="178" r="5.5" fill="#388E3C"/>
+      <circle cx="32" cy="182" r="5.5" fill="#388E3C"/>
+      <circle cx="40" cy="178" r="5.5" fill="#388E3C"/>
+      <!-- Right fingers -->
+      <circle cx="128" cy="178" r="5.5" fill="#388E3C"/>
+      <circle cx="136" cy="182" r="5.5" fill="#388E3C"/>
+      <circle cx="144" cy="178" r="5.5" fill="#388E3C"/>
+      <!-- Left leg -->
+      <path d="M 57 206 Q 52 218 60 222 Q 70 226 74 213 L 74 206 Z" fill="#388E3C"/>
+      <!-- Right leg -->
+      <path d="M 110 206 Q 116 218 108 222 Q 98 226 94 213 L 94 206 Z" fill="#388E3C"/>
+    </svg>
+  </div>
+
+  <div id="food-grid"></div>
+
+  <button id="ok-btn">✓ אישור!</button>
+
+</div><!-- #game -->
+
+<!-- Celebration overlay -->
+<div id="celebration">
+  <div class="cel-stars">&#11088;&#127775;&#11088;</div>
+  <div class="cel-yay">כל הכבוד! &#127881;</div>
+  <div class="cel-sub">מעולה! &#127752;</div>
+</div>
+
+<script>
+'use strict';
+
+/* ─────────────────── DATA ─────────────────── */
+const FOODS = [
+  { e: '🍎', n: 'תפוחים' },
+  { e: '🍕', n: 'פיצות' },
+  { e: '🍪', n: 'עוגיות' },
+  { e: '🍓', n: 'תותים' },
+  { e: '🍩', n: 'סופגניות' },
+  { e: '🥕', n: 'גזרים' },
+  { e: '🍌', n: 'בננות' },
+  { e: '🍦', n: 'גלידות' },
+  { e: '🧁', n: 'קאפקייקים' },
+  { e: '🍉', n: 'אבטיחים' },
+  { e: '🍇', n: 'ענבים' },
+  { e: '🌮', n: 'טאקוס' },
+];
+
+// Extra food items shown beyond the target — the child must count and stop!
+const EXTRAS = 3;
+
+/* ─────────────────── STATE ─────────────────── */
+let numQueue      = shuffle([1, 2, 3, 4, 5]);
+let numIdx        = 0;
+let timerInterval = null;
+let timeLeft      = 30;
+let foodIdx  = Math.floor(Math.random() * FOODS.length);
+let target   = 0;
+let fed      = 0;
+let active   = false;
+
+/* ─────────────────── DOM REFS ─────────────────── */
+const numDisplay  = document.getElementById('num-display');
+const foodDisplay = document.getElementById('food-display');
+const progressRow = document.getElementById('progress-row');
+const foodGrid    = document.getElementById('food-grid');
+const dinoWrap    = document.getElementById('dino-wrap');
+const mouthEl     = document.getElementById('mouth');
+const celebration = document.getElementById('celebration');
+const timerEl     = document.getElementById('timer');
+
+/* ─────────────────── AUDIO ─────────────────── */
+let actx = null;
+function getAudio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function beep(freq, dur, vol = 0.22, type = 'sine') {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch(_) {}
+}
+function playEat() {
+  try {
+    const ctx = getAudio();
+    const t = ctx.currentTime;
+
+    // Crunchy bite: noise burst shaped with exponential decay
+    const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.14, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++)
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.035));
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass'; hpf.frequency.value = 700;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.55, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    src.connect(hpf); hpf.connect(ng); ng.connect(ctx.destination);
+    src.start();
+
+    // "Gulp" sweep: sawtooth descending pitch
+    const osc = ctx.createOscillator();
+    const og  = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(520, t + 0.03);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.22);
+    og.gain.setValueAtTime(0.22, t + 0.03);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+    osc.connect(og); og.connect(ctx.destination);
+    osc.start(t + 0.03); osc.stop(t + 0.25);
+
+    // Little "mmm" tail
+    const osc2 = ctx.createOscillator();
+    const og2  = ctx.createGain();
+    osc2.type = 'sine'; osc2.frequency.value = 220;
+    og2.gain.setValueAtTime(0.12, t + 0.18);
+    og2.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    osc2.connect(og2); og2.connect(ctx.destination);
+    osc2.start(t + 0.18); osc2.stop(t + 0.33);
+  } catch(_) {}
+}
+function playHappy() {
+  [[523,0],[659,140],[784,280],[1047,420]].forEach(([f, t]) =>
+    setTimeout(() => beep(f, 0.28, 0.22, 'sine'), t));
+}
+function playWrong() {
+  beep(300, 0.14, 0.22, 'square');
+  setTimeout(() => beep(220, 0.2, 0.22, 'square'), 150);
+}
+function playWrongTap() {
+  beep(180, 0.09, 0.15, 'square');
+}
+function playYum() {
+  try {
+    const utter = new SpeechSynthesisUtterance('יאמ!');
+    utter.lang  = 'he-IL';
+    utter.rate  = 1.1;
+    utter.pitch = 1.6;
+    utter.volume = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  } catch(_) {}
+}
+
+/* ─────────────────── TIMER ─────────────────── */
+function startTimer() {
+  stopTimer();
+  timeLeft = 30;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      stopTimer();
+      if (active) { active = false; doTryAgain(); }
+    }
+  }, 1000);
+}
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+function updateTimerDisplay() {
+  timerEl.textContent = '⏱ ' + timeLeft;
+  timerEl.className = timeLeft > 15 ? '' : timeLeft > 8 ? 'warn' : 'danger';
+}
+
+/* ─────────────────── DINO HELPERS ─────────────────── */
+function setDinoState(state) {
+  dinoWrap.className = '';
+  void dinoWrap.offsetWidth;
+  dinoWrap.className = state;
+}
+
+function setMouth(state) {
+  if (!mouthEl) return;
+  if (state === 'eat') {
+    mouthEl.setAttribute('d', 'M 66 116 Q 84 140 102 116');
+    mouthEl.setAttribute('fill', '#2E7D32');
+    mouthEl.setAttribute('stroke', 'none');
+  } else if (state === 'happy') {
+    mouthEl.setAttribute('d', 'M 62 116 Q 84 136 106 116');
+    mouthEl.setAttribute('fill', 'none');
+    mouthEl.setAttribute('stroke', '#2E7D32');
+    mouthEl.setAttribute('stroke-width', '4');
+  } else if (state === 'sad') {
+    mouthEl.setAttribute('d', 'M 68 128 Q 84 116 100 128');
+    mouthEl.setAttribute('fill', 'none');
+    mouthEl.setAttribute('stroke', '#2E7D32');
+    mouthEl.setAttribute('stroke-width', '3.8');
+  } else {
+    mouthEl.setAttribute('d', 'M 68 118 Q 84 130 100 118');
+    mouthEl.setAttribute('fill', 'none');
+    mouthEl.setAttribute('stroke', '#2E7D32');
+    mouthEl.setAttribute('stroke-width', '3.8');
+  }
+}
+
+/* ─────────────────── PROGRESS DOTS ─────────────────── */
+function buildDots(n) {
+  progressRow.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = 'dot-' + i;
+    progressRow.appendChild(d);
+  }
+}
+function fillDot(idx) {
+  const d = document.getElementById('dot-' + idx);
+  if (d) d.classList.add('filled');
+}
+
+/* ─────────────────── FOOD ITEMS ─────────────────── */
+function getDecoys(count) {
+  const pool = FOODS.map((_, i) => i).filter(i => i !== foodIdx);
+  shuffle(pool);
+  return pool.slice(0, count).map(i => FOODS[i].e);
+}
+
+function spawnFood(targetEmoji, decoyEmojis) {
+  foodGrid.innerHTML = '';
+
+  // Build mixed list: correct items + decoys, then shuffle
+  const items = [];
+  for (let i = 0; i < target; i++)       items.push({ e: targetEmoji, correct: true });
+  for (let i = 0; i < EXTRAS; i++)       items.push({ e: decoyEmojis[i % decoyEmojis.length], correct: false });
+  shuffle(items);
+
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'food-btn';
+    btn.innerHTML = item.e;
+    btn.dataset.correct = item.correct ? '1' : '';
+    btn.style.animationDelay = (i * 0.07) + 's';
+
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      onTap(btn);
+    });
+
+    foodGrid.appendChild(btn);
+
+    setTimeout(() => {
+      if (!btn.classList.contains('eaten') && !btn.classList.contains('wrong-shake')) {
+        btn.classList.add('float');
+        btn.style.animationDelay = (i * 0.18) + 's';
+      }
+    }, items.length * 70 + 420);
+  });
+}
+
+function onTap(btn) {
+  if (!active || btn.classList.contains('eaten') || btn.classList.contains('wrong-shake')) return;
+
+  if (!btn.dataset.correct) {
+    // Wrong food type — shake it and stay on screen
+    btn.classList.remove('float');
+    btn.classList.add('wrong-shake');
+    playWrongTap();
+    setTimeout(() => {
+      btn.classList.remove('wrong-shake');
+      btn.classList.add('float');
+    }, 450);
+    return;
+  }
+
+  btn.classList.remove('float');
+  btn.classList.add('eaten');
+  fed++;
+  fillDot(fed - 1);
+
+  setDinoState('eating');
+  setMouth('eat');
+  playEat();
+  playYum();
+
+  setTimeout(() => {
+    setMouth('normal');
+    setDinoState('idle');
+  }, 320);
+}
+
+/* ─────────────────── OK BUTTON ─────────────────── */
+function onOkPress() {
+  if (!active) return;
+  active = false;
+
+  if (fed === target) {
+    setTimeout(doWin, 200);
+  } else {
+    doTryAgain();
+  }
+}
+
+function doTryAgain() {
+  stopTimer();
+  setDinoState('sad');
+  setMouth('sad');
+  playWrong();
+
+  setTimeout(() => {
+    setDinoState('idle');
+    setMouth('normal');
+    fed = 0;
+    buildDots(target);
+    spawnFood(FOODS[foodIdx].e, getDecoys(EXTRAS));
+    active = true;
+  }, 1100);
+}
+
+/* ─────────────────── WIN / NEXT ROUND ─────────────────── */
+function doWin() {
+  stopTimer();
+  // Fade out unchosen extra items
+  document.querySelectorAll('.food-btn:not(.eaten)').forEach(btn => {
+    btn.classList.remove('float');
+    btn.classList.add('leftover');
+  });
+
+  setDinoState('happy');
+  setMouth('happy');
+  playHappy();
+  spawnConfetti();
+  celebration.classList.add('show');
+
+  setTimeout(() => {
+    celebration.classList.remove('show');
+    nextRound();
+  }, 2600);
+}
+
+function nextRound() {
+  setDinoState('idle');
+  setMouth('normal');
+
+  numIdx++;
+  if (numIdx >= numQueue.length) {
+    numQueue = shuffle([1, 2, 3, 4, 5]);
+    numIdx = 0;
+  }
+  target  = numQueue[numIdx];
+  fed     = 0;
+  foodIdx = (foodIdx + 1) % FOODS.length;
+
+  refreshUI();
+}
+
+function refreshUI() {
+  const food = FOODS[foodIdx];
+
+  numDisplay.classList.remove('pop');
+  void numDisplay.offsetWidth;
+  numDisplay.textContent = target;
+  numDisplay.classList.add('pop');
+
+  foodDisplay.innerHTML = food.e + ' ' + food.n + '!';
+
+  buildDots(target);
+  spawnFood(food.e, getDecoys(EXTRAS));
+  active = true;
+  startTimer();
+}
+
+/* ─────────────────── CONFETTI ─────────────────── */
+function spawnConfetti() {
+  const colors = ['#FF6B6B','#FFE66D','#4ECDC4','#A8E6CF','#FF8B94','#FFD93D','#6BCB77','#4D96FF','#C77DFF','#FF9F43'];
+  for (let i = 0; i < 55; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div');
+      c.className = 'cf';
+      const size = 8 + Math.random() * 9;
+      c.style.cssText = `
+        left:${Math.random()*100}vw;
+        width:${size}px; height:${size}px;
+        background:${colors[i % colors.length]};
+        border-radius:${Math.random() > .45 ? '50%' : '3px'};
+        animation: cfFall ${1.6 + Math.random()*1.8}s linear ${Math.random()*.4}s forwards;
+      `;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3600);
+    }, i * 35);
+  }
+}
+
+/* ─────────────────── UTILS ─────────────────── */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ─────────────────── INIT ─────────────────── */
+document.getElementById('ok-btn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  onOkPress();
+});
+
+document.addEventListener('pointerdown', () => getAudio(), { once: true });
+
+target = numQueue[0];
+fed    = 0;
+refreshUI();
+</script>
+</body>
+</html>
