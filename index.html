@@ -78,17 +78,37 @@
       from { transform: scale(1); }
       to   { transform: scale(1.18); }
     }
-    #num-display {
-      font-size: clamp(72px, 22vw, 100px);
+    #food-targets {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 4px 0 2px;
+    }
+    .food-target {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+    .food-num {
+      font-size: clamp(48px, 15vw, 66px);
       line-height: 1;
       color: #FF6F00;
       font-weight: 900;
-      text-shadow: 3px 3px 0 #FFE0B2;
+      text-shadow: 2px 2px 0 #FFE0B2;
     }
-    #food-display {
-      font-size: clamp(18px, 5.5vw, 24px);
+    .food-label {
+      font-size: clamp(13px, 3.8vw, 17px);
       color: #1565C0;
       font-weight: 800;
+    }
+    .tgt-and {
+      font-size: clamp(18px, 5vw, 22px);
+      font-weight: 900;
+      color: #388E3C;
+      padding: 0 2px;
+      align-self: center;
     }
 
     /* pop animation */
@@ -102,12 +122,14 @@
     /* ─── Progress dots ─── */
     #progress-row {
       display: flex;
-      gap: 10px;
+      gap: 14px;
       justify-content: center;
       min-height: 26px;
       align-items: center;
       flex-shrink: 0;
     }
+    .prog-group { display: flex; gap: 8px; align-items: center; }
+    .prog-sep { width: 2px; height: 22px; background: #C8E6C9; border-radius: 1px; }
     .dot {
       width: 22px; height: 22px;
       border-radius: 50%;
@@ -308,11 +330,24 @@
       <div class="banner-top">תן לי</div>
       <div id="timer">⏱ 30</div>
     </div>
-    <div id="num-display">?</div>
-    <div id="food-display">טוען...</div>
+    <div id="food-targets">
+      <div class="food-target">
+        <span id="num-a" class="food-num">?</span>
+        <span id="label-a" class="food-label"></span>
+      </div>
+      <div class="tgt-and">ו</div>
+      <div class="food-target">
+        <span id="num-b" class="food-num">?</span>
+        <span id="label-b" class="food-label"></span>
+      </div>
+    </div>
   </div>
 
-  <div id="progress-row"></div>
+  <div id="progress-row">
+    <div id="prog-a" class="prog-group"></div>
+    <div class="prog-sep"></div>
+    <div id="prog-b" class="prog-group"></div>
+  </div>
 
   <!-- Cute front-facing dinosaur SVG -->
   <div id="dino-wrap" class="idle">
@@ -402,23 +437,21 @@ const FOODS = [
   { e: '🌮', n: 'טאקוס' },
 ];
 
-// Extra food items shown beyond the target — the child must count and stop!
-const EXTRAS = 3;
-
 /* ─────────────────── STATE ─────────────────── */
-let numQueue      = shuffle([1, 2, 3, 4, 5]);
-let numIdx        = 0;
 let timerInterval = null;
 let timeLeft      = 30;
-let foodIdx  = Math.floor(Math.random() * FOODS.length);
-let target   = 0;
-let fed      = 0;
+let foodIdxA = 0, foodIdxB = 1;
+let targA    = 1, targB    = 1;
+let fedA     = 0, fedB     = 0;
 let active   = false;
 
 /* ─────────────────── DOM REFS ─────────────────── */
-const numDisplay  = document.getElementById('num-display');
-const foodDisplay = document.getElementById('food-display');
-const progressRow = document.getElementById('progress-row');
+const numA        = document.getElementById('num-a');
+const numB        = document.getElementById('num-b');
+const labelA      = document.getElementById('label-a');
+const labelB      = document.getElementById('label-b');
+const progA       = document.getElementById('prog-a');
+const progB       = document.getElementById('prog-b');
 const foodGrid    = document.getElementById('food-grid');
 const dinoWrap    = document.getElementById('dino-wrap');
 const mouthEl     = document.getElementById('mouth');
@@ -497,12 +530,14 @@ function playWrong() {
 function playWrongTap() {
   beep(180, 0.09, 0.15, 'square');
 }
+const YUM_PHRASES = ['יאמ!', 'טעים!', 'מממממ!', 'וואו!', 'יאמי יאמי!', 'כל כך טעים!', 'עוד!', 'נהדר!'];
 function playYum() {
   try {
-    const utter = new SpeechSynthesisUtterance('יאמ!');
-    utter.lang  = 'he-IL';
-    utter.rate  = 1.1;
-    utter.pitch = 1.6;
+    const phrase = YUM_PHRASES[Math.floor(Math.random() * YUM_PHRASES.length)];
+    const utter  = new SpeechSynthesisUtterance(phrase);
+    utter.lang   = 'he-IL';
+    utter.rate   = 0.7 + Math.random() * 0.9;
+    utter.pitch  = 1.4 + Math.random() * 0.9;
     utter.volume = 1;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
@@ -563,41 +598,40 @@ function setMouth(state) {
 }
 
 /* ─────────────────── PROGRESS DOTS ─────────────────── */
-function buildDots(n) {
-  progressRow.innerHTML = '';
+function buildDots(n, groupEl) {
+  groupEl.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const d = document.createElement('div');
     d.className = 'dot';
-    d.id = 'dot-' + i;
-    progressRow.appendChild(d);
+    d.id = groupEl.id + '-dot-' + i;
+    groupEl.appendChild(d);
   }
 }
-function fillDot(idx) {
-  const d = document.getElementById('dot-' + idx);
+function fillDot(groupId, idx) {
+  const d = document.getElementById(groupId + '-dot-' + idx);
   if (d) d.classList.add('filled');
 }
 
 /* ─────────────────── FOOD ITEMS ─────────────────── */
-function getDecoys(count) {
-  const pool = FOODS.map((_, i) => i).filter(i => i !== foodIdx);
-  shuffle(pool);
-  return pool.slice(0, count).map(i => FOODS[i].e);
-}
-
-function spawnFood(targetEmoji, decoyEmojis) {
+function spawnFood() {
   foodGrid.innerHTML = '';
 
-  // Build mixed list: correct items + decoys, then shuffle
+  // Pick a decoy food type (different from both A and B)
+  const pool = FOODS.map((_, i) => i).filter(i => i !== foodIdxA && i !== foodIdxB);
+  shuffle(pool);
+  const decoyIdx = pool[0];
+
   const items = [];
-  for (let i = 0; i < target; i++)       items.push({ e: targetEmoji, correct: true });
-  for (let i = 0; i < EXTRAS; i++)       items.push({ e: decoyEmojis[i % decoyEmojis.length], correct: false });
+  for (let i = 0; i < targA; i++) items.push({ e: FOODS[foodIdxA].e, food: 'A' });
+  for (let i = 0; i < targB; i++) items.push({ e: FOODS[foodIdxB].e, food: 'B' });
+  for (let i = 0; i < 2; i++)    items.push({ e: FOODS[decoyIdx].e,  food: 'decoy' });
   shuffle(items);
 
   items.forEach((item, i) => {
     const btn = document.createElement('button');
     btn.className = 'food-btn';
     btn.innerHTML = item.e;
-    btn.dataset.correct = item.correct ? '1' : '';
+    btn.dataset.food = item.food;
     btn.style.animationDelay = (i * 0.07) + 's';
 
     btn.addEventListener('pointerdown', e => {
@@ -619,32 +653,30 @@ function spawnFood(targetEmoji, decoyEmojis) {
 function onTap(btn) {
   if (!active || btn.classList.contains('eaten') || btn.classList.contains('wrong-shake')) return;
 
-  if (!btn.dataset.correct) {
-    // Wrong food type — shake it and stay on screen
+  const food    = btn.dataset.food;
+  const isWrong = food === 'decoy'
+    || (food === 'A' && fedA >= targA)
+    || (food === 'B' && fedB >= targB);
+
+  if (isWrong) {
     btn.classList.remove('float');
     btn.classList.add('wrong-shake');
     playWrongTap();
-    setTimeout(() => {
-      btn.classList.remove('wrong-shake');
-      btn.classList.add('float');
-    }, 450);
+    setTimeout(() => { btn.classList.remove('wrong-shake'); btn.classList.add('float'); }, 450);
     return;
   }
 
   btn.classList.remove('float');
   btn.classList.add('eaten');
-  fed++;
-  fillDot(fed - 1);
+  if (food === 'A') { fedA++; fillDot('prog-a', fedA - 1); }
+  else              { fedB++; fillDot('prog-b', fedB - 1); }
 
   setDinoState('eating');
   setMouth('eat');
   playEat();
   playYum();
 
-  setTimeout(() => {
-    setMouth('normal');
-    setDinoState('idle');
-  }, 320);
+  setTimeout(() => { setMouth('normal'); setDinoState('idle'); }, 320);
 }
 
 /* ─────────────────── OK BUTTON ─────────────────── */
@@ -652,7 +684,7 @@ function onOkPress() {
   if (!active) return;
   active = false;
 
-  if (fed === target) {
+  if (fedA === targA && fedB === targB) {
     setTimeout(doWin, 200);
   } else {
     doTryAgain();
@@ -668,10 +700,12 @@ function doTryAgain() {
   setTimeout(() => {
     setDinoState('idle');
     setMouth('normal');
-    fed = 0;
-    buildDots(target);
-    spawnFood(FOODS[foodIdx].e, getDecoys(EXTRAS));
+    fedA = 0; fedB = 0;
+    buildDots(targA, progA);
+    buildDots(targB, progB);
+    spawnFood();
     active = true;
+    startTimer();
   }, 1100);
 }
 
@@ -700,30 +734,28 @@ function nextRound() {
   setDinoState('idle');
   setMouth('normal');
 
-  numIdx++;
-  if (numIdx >= numQueue.length) {
-    numQueue = shuffle([1, 2, 3, 4, 5]);
-    numIdx = 0;
-  }
-  target  = numQueue[numIdx];
-  fed     = 0;
-  foodIdx = (foodIdx + 1) % FOODS.length;
+  foodIdxA = Math.floor(Math.random() * FOODS.length);
+  do { foodIdxB = Math.floor(Math.random() * FOODS.length); } while (foodIdxB === foodIdxA);
+  targA = Math.ceil(Math.random() * 3);
+  targB = Math.ceil(Math.random() * 3);
+  fedA = 0; fedB = 0;
 
   refreshUI();
 }
 
 function refreshUI() {
-  const food = FOODS[foodIdx];
+  numA.classList.remove('pop'); void numA.offsetWidth;
+  numA.textContent = targA;    numA.classList.add('pop');
 
-  numDisplay.classList.remove('pop');
-  void numDisplay.offsetWidth;
-  numDisplay.textContent = target;
-  numDisplay.classList.add('pop');
+  numB.classList.remove('pop'); void numB.offsetWidth;
+  numB.textContent = targB;    numB.classList.add('pop');
 
-  foodDisplay.innerHTML = food.e + ' ' + food.n + '!';
+  labelA.innerHTML = FOODS[foodIdxA].e + ' ' + FOODS[foodIdxA].n;
+  labelB.innerHTML = FOODS[foodIdxB].e + ' ' + FOODS[foodIdxB].n;
 
-  buildDots(target);
-  spawnFood(food.e, getDecoys(EXTRAS));
+  buildDots(targA, progA);
+  buildDots(targB, progB);
+  spawnFood();
   active = true;
   startTimer();
 }
@@ -766,8 +798,10 @@ document.getElementById('ok-btn').addEventListener('pointerdown', e => {
 
 document.addEventListener('pointerdown', () => getAudio(), { once: true });
 
-target = numQueue[0];
-fed    = 0;
+foodIdxA = Math.floor(Math.random() * FOODS.length);
+do { foodIdxB = Math.floor(Math.random() * FOODS.length); } while (foodIdxB === foodIdxA);
+targA = Math.ceil(Math.random() * 3);
+targB = Math.ceil(Math.random() * 3);
 refreshUI();
 </script>
 </body>
