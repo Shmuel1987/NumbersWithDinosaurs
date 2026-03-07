@@ -155,22 +155,58 @@
       height: auto;
       filter: drop-shadow(0 6px 14px rgba(0,0,0,.15));
     }
-    #dino-wrap.idle svg   { animation: breathe 2.4s ease-in-out infinite; }
-    #dino-wrap.eating svg { animation: chomp .28s ease-out both; }
-    #dino-wrap.happy svg  { animation: happyBounce .55s ease-in-out infinite alternate; }
+    #dino-wrap.idle svg   { animation: sway 1.7s ease-in-out infinite; }
+    #dino-wrap.eating svg { animation: chomp .32s ease-out both; }
+    #dino-wrap.happy svg  { animation: happyBounce .5s ease-in-out infinite alternate; }
 
-    @keyframes breathe {
-      0%,100% { transform: scaleY(1) translateY(0); }
-      50%      { transform: scaleY(1.04) translateY(-3px); }
+    @keyframes sway {
+      0%   { transform: rotate(-4deg) translateY(0); }
+      25%  { transform: rotate(0deg) translateY(-9px); }
+      50%  { transform: rotate(4deg) translateY(0); }
+      75%  { transform: rotate(0deg) translateY(-9px); }
+      100% { transform: rotate(-4deg) translateY(0); }
     }
     @keyframes chomp {
-      0%   { transform: translateY(0) scale(1); }
-      35%  { transform: translateY(-10px) scale(1.1); }
-      100% { transform: translateY(0) scale(1); }
+      0%   { transform: translateY(0) scale(1) rotate(0deg); }
+      30%  { transform: translateY(-18px) scale(1.15) rotate(-7deg); }
+      65%  { transform: translateY(-6px) scale(1.07) rotate(5deg); }
+      100% { transform: translateY(0) scale(1) rotate(0deg); }
     }
     @keyframes happyBounce {
-      from { transform: translateY(0) rotate(-7deg) scale(1); }
-      to   { transform: translateY(-14px) rotate(7deg) scale(1.05); }
+      from { transform: translateY(0) rotate(-10deg) scale(1); }
+      to   { transform: translateY(-20px) rotate(10deg) scale(1.1); }
+    }
+
+    /* ─── Eye blink ─── */
+    #eye-l, #eye-r { transform-box: fill-box; transform-origin: center; }
+    #dino-wrap.idle #eye-l { animation: blink 3s ease-in-out infinite; }
+    #dino-wrap.idle #eye-r { animation: blink 3s ease-in-out infinite 0.07s; }
+    @keyframes blink {
+      0%, 85%, 100% { transform: scaleY(1); }
+      91%           { transform: scaleY(0.07); }
+    }
+
+    /* ─── Arm wave ─── */
+    #arm-l, #arm-r { transform-box: fill-box; transform-origin: top center; }
+    #dino-wrap.idle #arm-l { animation: waveL 1.7s ease-in-out infinite; }
+    #dino-wrap.idle #arm-r { animation: waveR 1.7s ease-in-out infinite 0.22s; }
+    @keyframes waveL {
+      0%, 100% { transform: rotate(0deg); }
+      40%      { transform: rotate(-22deg); }
+      70%      { transform: rotate(8deg); }
+    }
+    @keyframes waveR {
+      0%, 100% { transform: rotate(0deg); }
+      40%      { transform: rotate(22deg); }
+      70%      { transform: rotate(-8deg); }
+    }
+
+    /* ─── Tail wag ─── */
+    #dino-tail { transform-box: fill-box; transform-origin: left center; }
+    #dino-wrap.idle #dino-tail { animation: tailWag 0.85s ease-in-out infinite; }
+    @keyframes tailWag {
+      0%, 100% { transform: rotate(0deg); }
+      50%      { transform: rotate(14deg); }
     }
 
     /* ─── Food grid ─── */
@@ -353,7 +389,7 @@
   <div id="dino-wrap" class="idle">
     <svg viewBox="0 0 170 220" xmlns="http://www.w3.org/2000/svg">
       <!-- Tail -->
-      <path d="M 128 182 Q 158 188 156 205 Q 152 220 136 210 Q 122 198 124 180" fill="#43A047"/>
+      <path id="dino-tail" d="M 128 182 Q 158 188 156 205 Q 152 220 136 210 Q 122 198 124 180" fill="#43A047"/>
       <!-- Body -->
       <ellipse cx="84" cy="165" rx="58" ry="53" fill="#4CAF50"/>
       <!-- Belly -->
@@ -367,8 +403,8 @@
       <polygon points="78,38 84,16 90,38" fill="#2E7D32"/>
       <polygon points="96,46 102,26 108,46" fill="#2E7D32"/>
       <!-- Eyes (whites) -->
-      <circle cx="66" cy="78" r="16" fill="white"/>
-      <circle cx="102" cy="78" r="16" fill="white"/>
+      <circle id="eye-l" cx="66" cy="78" r="16" fill="white"/>
+      <circle id="eye-r" cx="102" cy="78" r="16" fill="white"/>
       <!-- Irises -->
       <circle cx="68" cy="80" r="11" fill="#1E88E5"/>
       <circle cx="104" cy="80" r="11" fill="#1E88E5"/>
@@ -387,9 +423,9 @@
       <path id="mouth" d="M 68 118 Q 84 130 100 118"
             stroke="#2E7D32" stroke-width="3.8" fill="none" stroke-linecap="round"/>
       <!-- Left arm -->
-      <path d="M 32 155 Q 22 167 27 177 Q 32 182 41 173 L 44 155 Z" fill="#43A047"/>
+      <path id="arm-l" d="M 32 155 Q 22 167 27 177 Q 32 182 41 173 L 44 155 Z" fill="#43A047"/>
       <!-- Right arm -->
-      <path d="M 136 155 Q 146 167 141 177 Q 136 182 127 173 L 124 155 Z" fill="#43A047"/>
+      <path id="arm-r" d="M 136 155 Q 146 167 141 177 Q 136 182 127 173 L 124 155 Z" fill="#43A047"/>
       <!-- Left fingers -->
       <circle cx="24" cy="178" r="5.5" fill="#388E3C"/>
       <circle cx="32" cy="182" r="5.5" fill="#388E3C"/>
@@ -530,17 +566,14 @@ function playWrong() {
 function playWrongTap() {
   beep(180, 0.09, 0.15, 'square');
 }
-const YUM_PHRASES = ['יאמ!', 'טעים!', 'מממממ!', 'וואו!', 'יאמי יאמי!', 'כל כך טעים!', 'עוד!', 'נהדר!'];
-function playYum() {
+const HEB_NUMS = ['', 'אחת', 'שתיים', 'שלוש', 'ארבע', 'חמש'];
+
+function speakHebrew(text, rate = 0.9, pitch = 1.2) {
   try {
-    const phrase = YUM_PHRASES[Math.floor(Math.random() * YUM_PHRASES.length)];
-    const utter  = new SpeechSynthesisUtterance(phrase);
-    utter.lang   = 'he-IL';
-    utter.rate   = 0.7 + Math.random() * 0.9;
-    utter.pitch  = 1.4 + Math.random() * 0.9;
-    utter.volume = 1;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'he-IL'; u.rate = rate; u.pitch = pitch; u.volume = 1;
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
+    window.speechSynthesis.speak(u);
   } catch(_) {}
 }
 
@@ -671,10 +704,11 @@ function onTap(btn) {
   if (food === 'A') { fedA++; fillDot('prog-a', fedA - 1); }
   else              { fedB++; fillDot('prog-b', fedB - 1); }
 
+  const count = food === 'A' ? fedA : fedB;
   setDinoState('eating');
   setMouth('eat');
   playEat();
-  playYum();
+  speakHebrew(HEB_NUMS[count] || String(count), 0.8 + Math.random() * 0.4, 1.5 + Math.random() * 0.6);
 
   setTimeout(() => { setMouth('normal'); setDinoState('idle'); }, 320);
 }
@@ -696,6 +730,7 @@ function doTryAgain() {
   setDinoState('sad');
   setMouth('sad');
   playWrong();
+  setTimeout(() => speakHebrew('נסה שוב!', 0.9, 1.2), 400);
 
   setTimeout(() => {
     setDinoState('idle');
@@ -721,6 +756,7 @@ function doWin() {
   setDinoState('happy');
   setMouth('happy');
   playHappy();
+  speakHebrew('כל הכבוד! ספרת נכון!', 1.0, 1.4);
   spawnConfetti();
   celebration.classList.add('show');
 
@@ -758,6 +794,10 @@ function refreshUI() {
   spawnFood();
   active = true;
   startTimer();
+  setTimeout(() => speakHebrew(
+    `תן לי ${HEB_NUMS[targA]} ${FOODS[foodIdxA].n} ו${HEB_NUMS[targB]} ${FOODS[foodIdxB].n}!`,
+    0.85, 1.3
+  ), 700);
 }
 
 /* ─────────────────── CONFETTI ─────────────────── */
